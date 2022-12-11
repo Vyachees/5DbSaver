@@ -21,9 +21,9 @@ public class Db {
     }
 
 
-    private static final String INSERT_DATA = "INSERT INTO public.\"MyTable1\"" +
-            "  (msg_num, date_time, id_truck, lat, lon) VALUES " +
-            " (?, ?, ?, ?, ?);";
+    private static final String INSERT_DATA = "INSERT INTO public.coords" +
+            "  (msg_num, date_time, id_truck, lat, lon, trip_number) VALUES " +
+            " (?, ?, ?, ?, ?, ?);";
 
     public static void insertRecord
             //(Connection connection,Integer msg_num,String date_time,String id_truck,Double lat, Double lon)
@@ -36,6 +36,7 @@ public class Db {
         String id_truck=msg[3];
         double lat= Double.parseDouble(msg[4].replace(",","."));
         double lon= Double.parseDouble(msg[5].replace(",","."));
+        int tripNumber=Integer.parseInt(msg[6]) ;
 
         // Step 1: Establishing a Connection
 
@@ -46,6 +47,7 @@ public class Db {
             preparedStatement.setString(3, id_truck);
             preparedStatement.setDouble(4, lat);
             preparedStatement.setDouble(5, lon);
+            preparedStatement.setInt(6, tripNumber);
             log.info(preparedStatement.toString());
             // Step 3: Execute the query or update query
             preparedStatement.executeUpdate();

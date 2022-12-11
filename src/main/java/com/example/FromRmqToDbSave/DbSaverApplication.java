@@ -8,17 +8,6 @@ import com.rabbitmq.client.Channel;
 import org.springframework.context.ApplicationContext;
 
 
-/*
-* 1. Есть класс Db. В котором есть методы соединения с базой данных, записи сообщения, чтения сообщения
-* 2. Есть класс Rmq. В котором есть матоды соединения с RMQ, записи сообщения, чтения сообщения.
-* 3. Есть класс Sockets. В котором есть методы создания сервера, клиента, подключения клиента к серверу, отправка
-* сообщения от клиента к серверу, отправка сообщения от сервера к клиенту.
-* */
-
-/*
-* To add different files you can use the spring.config.location properties which takes a comma separated list of property files or file location (directories).
--Dspring.config.location=your/config/dir/
-* */
 @SpringBootApplication
 @Slf4j
 public class DbSaverApplication {
@@ -31,24 +20,17 @@ public class DbSaverApplication {
 		final ConfigProperties conf = ctx.getBean(ConfigProperties.class);
 		log.info(conf.getDbUrl());
 
-		//Соединяемся с БД
+		//Connect to DB
 		if(dbCon==null) {
 			dbCon =	Db.getConnection(conf.getDbUrl(), conf.getDbUsername(), conf.getDbPassword());
 		}
-		//Соединяемся с RMQ
+		//Connect to RMQ
 		if(rmqChan==null){
 			rmqChan= Rmq.GetRmqConnection(conf.getRmqHost(),conf.getRmqPort());
 		}
-		//Вычитываем сообщение из RMQ
+		//Read from RMQ
 
-
-		//TODO добавить логирование во внешний файл
 		 Rmq.receiveFromRmqAndSaveToDb("queue-for-psg",rmqChan,dbCon);//(rmq_queue,rmqChan);
-
-		//log.info("232 "+message);
-
-		//	Recv recv=new Recv();
-	//	recv.receiveFromRmq();
 
 	}
 
