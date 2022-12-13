@@ -5,7 +5,6 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DeliverCallback;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
@@ -13,14 +12,12 @@ import java.util.Arrays;
 import java.util.concurrent.TimeoutException;
 
 @Slf4j
-@Component
 public class Rmq {
+    private static final String queueName="queue-for-psg";
 
-    public static Channel GetRmqConnection(String host, Integer port) throws IOException {
+    public static Channel getRmqConnection() throws IOException {
         log.info("Connection to Rmq start");
         ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost(host);
-        factory.setPort(port);
         Connection connection = null;
         try {
             connection = factory.newConnection();
@@ -32,35 +29,38 @@ public class Rmq {
         return connection.createChannel();
     }
 
-    public static void receiveFromRmqAndSaveToDb(String QUEUE_NAME, Channel channel, java.sql.Connection connection) throws Exception {
+    public static void createQueue(Channel channel) throws IOException {
         log.info("Checking queue existing");
-        channel.queueDeclare(QUEUE_NAME, false, false, false, null);
-        channel.queueBind(QUEUE_NAME, "TestData3", "#");
-        channel.basicQos(1);
-        log.info("Receive starting");
+        channel.queueDeclare(queueName, false, false, false, null);
+        channel.queueBind(queueName, "TestData3", "#");
+        channel.basicQos(10);
+    }
 
+    static java.sql.Connection dbCon;
+    static Channel rmqChan;
+    public static void receiveFromRmqAndSaveToDb() throws Exception {
+        log.info("Receive starting");
         DeliverCallback deliverCallback = (consumerTag, delivery) -> {
             String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
             log.info("Received");
-
-            //парсим в массив и разбираем на переменные для записи в БД
+            //Parse to array and get values for insert into DB
             String[] msgArr=message.split(" ");
             log.info("Parsed "+ Arrays.toString(msgArr));
             try {
-                Db.insertRecord(connection,msgArr);
-            } catch (SQLException e) {
+                if(dbCon.isClosed()){
+                    Thread.sleep(5000);
+                    dbCon=Db.getConnection();
+                }
+                Db.insertRecord(dbCon,msgArr);
+            } catch (SQLException | InterruptedException e) {
                 throw new RuntimeException(e);
             }
             finally {
-                channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
+                rmqChan.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
             }
             log.info("Inserted");
             log.info("");
-
-
         };
-          channel.basicConsume(QUEUE_NAME, false, deliverCallback, consumerTag -> { });
-
+        rmqChan.basicConsume(queueName, false, deliverCallback, consumerTag -> { });
     }
-
 }
